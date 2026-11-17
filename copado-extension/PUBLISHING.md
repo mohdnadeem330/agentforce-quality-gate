@@ -11,10 +11,14 @@ Mirrors the anatomy of Copado's own `copado_labs` sfdx-scanner extension:
 
 Generated from the live, production-proven records by `copado/tools/build_extension_seed.py` (rerun it after any function/step change, then bump the package version).
 
-Not packageable — subscriber post-install steps (documented for the listing):
-1. Add the **`AgentTest`** value to the `copado__Test_Tool` global value set (Setup → Picklist Value Sets) — subscriber customizations of managed value sets can't ship in a package.
-2. Create the Quality Gate Rule (After Commit, filter `{$Changes.Type.equals("AiAuthoringBundle")}`, scope to pipeline/environments) — org-specific by design.
-3. Per agent: deploy a Testing Center suite named `<AgentApiName>_Suite` to the dev sandbox (requires a published agent + Testing Center enabled).
+## Post-install steps (scratch-org verified, 2026-11-17)
+
+Install-tested end to end in a fresh Developer scratch org: the full dependency chain (Deployer 27.52 → SalesforceDx 9.37 → Quality Tools 6.9) **and** this package install cleanly; the Test Tool CMDT and seed static resource ship correctly. The following subscriber steps complete the setup — **all scriptable via Metadata API** (verified: subscriber picklist additions to managed picklists deploy without error):
+
+1. **Two picklist values** (both named `AgentTest`): one in the **`copado__Test_Tool` global value set** (used by Quality Gate Rule → Tool), one on the **field picklist `copado__ExtensionConfiguration__c.copado__ExtensionTool__c`** (field-local, NOT backed by the GVS — verified). Retrieve-modify-deploy both, or two Setup clicks.
+2. **Create + activate an Extension Configuration** for tool `AgentTest` (TestType `Functional Test`). Gate-record materialization from the packaged seed happens through the Quality Tools **UI wizard** (its `EnableExtensionSync` controller is UI-only — not a trigger, flow, or invocable; record inserts, `Requires_Sync__c`, and Status changes do NOT fire it headlessly). Deterministic alternative: create the Function / Job Template / Job Step records directly from the payload shapes in `copado/record-payloads/` (this is exactly how the original production records were created).
+3. **Quality Gate Rule** (After Commit, filter `{$Changes.Type.equals("AiAuthoringBundle")}`, scope to pipeline/stage/environments) — org-specific by design; shape in `copado/record-payloads/qgr_payload.json` + `qgrc_payload.json`.
+4. **Per agent:** a Testing Center suite named `<AgentApiName>_Suite` in the dev sandbox (published agent + Testing Center enabled).
 
 ## Creating the unlocked package (one-time + per version)
 
@@ -32,7 +36,7 @@ sf package version create --package "Agentforce Testing Gate" \
 # promote to released when ready for distribution
 sf package version promote --package "Agentforce Testing Gate@1.0.0-1" --target-dev-hub DevHub
 
-# test install (any org with Copado Deployer v24+ and Quality Tools v3+)
+# test install (any org with Copado Deployer v24+, Copado SalesforceDx/CSFP v6+, and Quality Tools v3+)
 sf package install --package "Agentforce Testing Gate@1.0.0-1" -o <org> --wait 20
 ```
 

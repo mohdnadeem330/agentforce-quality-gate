@@ -6,12 +6,14 @@
     },
     {
       "path": "copado-extension",
+      "default": false,
       "package": "Agentforce Testing Gate",
       "versionName": "ver 1.0",
       "versionNumber": "1.0.0.NEXT",
       "versionDescription": "Agentforce Testing Center as a Copado quality gate: commit-triggered, suite-agnostic, result on the user story, promotion-blocking",
       "dependencies": [
         { "package": "Copado Deployer@27.52.0.1" },
+        { "package": "Copado SalesforceDx@9.37.0.2" },
         { "package": "Copado Quality Tools@6.9.0.3" }
       ]
     }
@@ -22,6 +24,8 @@
   "sourceApiVersion": "68.0",
   "packageAliases": {
     "Copado Deployer@27.52.0.1": "04tWU000000XggPYAS",
-    "Copado Quality Tools@6.9.0.3": "04tP7000003lZobIAE"
+    "Copado SalesforceDx@9.37.0.2": "04tP7000003lXbVIAU",
+    "Copado Quality Tools@6.9.0.3": "04tP7000003lZobIAE",
+    "Agentforce Testing Gate": "0HoMz00000038CLKAY"
   }
 }
