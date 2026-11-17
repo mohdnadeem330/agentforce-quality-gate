@@ -1,0 +1,214 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>body{margin:0;background:#fff}.wrap{display:inline-block;padding:24px;background:#fff}</style>
+</head><body>
+<div id="cicdarch" class="wrap">
+<pre class="mermaid">
+%%{init: {"flowchart": {"nodeSpacing": 40, "rankSpacing": 60}} }%%
+flowchart LR
+    subgraph repo["📁 Git repository (user story branch)"]
+        specsY["specs/*.yaml<br/>test specs (source of truth)"]
+        suiteXml["aiEvaluationDefinitions/*.xml<br/>generated suite metadata"]
+        bundle["aiAuthoringBundles/Copado_Expert<br/>agent bundle"]
+        funcScript["scripts/agentforce_deploy.sh"]
+        specsY -- "sf agent test create --preview" --> suiteXml
+    end
+
+    subgraph copado["🔁 Copado promotion"]
+        preStep["Function step<br/>phase=pre (optional,<br/>legacy metadata only)"]
+        deployStep["Metadata deployment"]
+        postStep["Function step<br/>phase=post"]
+        gate{"pass rate ≥<br/>threshold?"}
+        preStep --> deployStep --> postStep
+    end
+
+    subgraph org["☁️ Target org (Platform / SIT / UAT)"]
+        draft["Agent draft"]
+        live[("Live agent<br/>version N+1")]
+        suiteOrg["Testing Center suite<br/>(AiEvaluationDefinition)"]
+    end
+
+    bundle --> deployStep
+    suiteXml --> deployStep
+    funcScript -. "registered as Function<br/>Agentforce_Deploy (dx:v6)" .-> postStep
+    preStep -- "PUT bot-versions/{id}/activation<br/>(Inactive)" --> live
+    deployStep -- "deploys draft + suite" --> draft
+    deployStep --> suiteOrg
+    postStep -- "sf agent publish authoring-bundle<br/>--api-name (creates + activates vN+1)" --> live
+    postStep -- "sf agent test run" --> suiteOrg
+    suiteOrg -- "evaluates" --> live
+    postStep --> gate
+    gate -- "yes" --> promoteNext(["Promotion continues<br/>to next environment"])
+    gate -- "no" --> blocked["Step fails —<br/>promotion blocked"]
+
+    style repo fill:#ecfdf5,stroke:#047857,stroke-dasharray:5
+    style copado fill:#eef2ff,stroke:#4338ca,stroke-dasharray:5
+    style org fill:#ecfeff,stroke:#0e7490,stroke-dasharray:5
+    style gate fill:#ffecbd,stroke:#e8a302
+    style promoteNext fill:#cdf4d3,stroke:#3e9b4b
+    style blocked fill:#ffcdc2,stroke:#dc3009
+</pre>
+</div>
+<div id="cicdseq" class="wrap">
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Dev as Developer
+    participant CP as Copado Promotion
+    participant FN as Function<br/>agentforceDeploy
+    participant ORG as Target Org
+
+    Dev->>CP: Promote user story (bundle + suite XML)
+
+    opt deactivate=true — legacy Bot/GenAiPlanner metadata only
+        CP->>FN: Run phase=pre
+        FN->>ORG: Query active BotVersion
+        ORG-->>FN: BotVersion Id
+        FN->>ORG: PUT /connect/bot-versions/{id}/activation {Inactive}
+        ORG-->>FN: Agent deactivated
+    end
+
+    CP->>ORG: Deploy metadata (draft bundle, flows, Apex, AiEvaluationDefinition)
+    ORG-->>CP: Deploy succeeded
+
+    CP->>FN: Run phase=post
+    FN->>ORG: sf org login access-token (host extracted from SOAP endpoint)
+    FN->>ORG: sf agent publish authoring-bundle --api-name
+    Note over FN,ORG: Creates version N+1 from the deployed draft and activates it
+    ORG-->>FN: Version N+1 ACTIVE
+    FN->>ORG: sf agent test run --api-name Copado_Expert_Suite --wait 15
+    ORG-->>FN: Results JSON (output_validation per case)
+
+    alt pass rate ≥ threshold (default 80%)
+        FN-->>CP: exit 0 — quality gate passed
+        CP-->>Dev: Promotion continues to next environment
+    else below threshold
+        FN-->>CP: exit 1 — failed utterances in step log
+        CP-->>Dev: Promotion blocked (previous agent version still serving)
+    end
+</pre>
+</div>
+<div id="qarch" class="wrap">
+<pre class="mermaid">
+%%{init: {"flowchart": {"nodeSpacing": 40, "rankSpacing": 60}} }%%
+flowchart LR
+    subgraph control["☁️ COPADO org — control plane"]
+        qgr["Quality Gate Rule<br/>Agentforce Tests - After Commit<br/>filter: Type = AiAuthoringBundle"]
+        test["Test record<br/>auto-created on User Story"]
+        extconf["Extension Configuration<br/>AgentforceAgentTest"]
+        tool[["Test Tool CMDT<br/>AgentTest"]]
+        jt["Job Template<br/>Run Agentforce Tests_1"]
+        manifest[("Commit manifest file<br/>'Copado Commit changes'<br/>(no extension)")]
+        result["Result record<br/>on the User Story"]
+        promo{"Promotion<br/>allowed?"}
+    end
+
+    subgraph runtime["⚙️ Function runtime (dx:v6)"]
+        fn["Function Run_Agentforce_Tests<br/>image copado-multicloud-dx:v6<br/>(sf CLI + plugin-agent bundled, 30 min timeout)"]
+    end
+
+    subgraph sandbox["🏖️ Dev sandbox (Platform)"]
+        agent[["Committed agent<br/>aiAuthoringBundle"]]
+        suite["Testing Center suite<br/>AgentName_Suite"]
+    end
+
+    qgr -- "matching commit" --> test
+    test --> extconf
+    extconf --> tool
+    tool -- "JobTemplate ApiName<br/>(auto-underscored!)" --> jt
+    jt --> fn
+    fn -. "copado --downloadfiles" .-> manifest
+    fn -- "sf agent test run<br/>(Source credential, host-extracted login)" --> suite
+    suite -- "evaluates" --> agent
+    fn -- "exit code" --> result
+    result --> promo
+
+    style control fill:#eef2ff,stroke:#4338ca,stroke-dasharray:5
+    style runtime fill:#fff7ed,stroke:#c2410c,stroke-dasharray:5
+    style sandbox fill:#ecfdf5,stroke:#047857,stroke-dasharray:5
+    style promo fill:#ffecbd,stroke:#e8a302
+</pre>
+</div>
+<div id="qseq" class="wrap">
+<pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Dev as Developer
+    participant US as User Story<br/>(COPADO org)
+    participant QGR as Quality Gate Rule
+    participant FN as Function<br/>Run_Agentforce_Tests
+    participant SB as Dev Sandbox<br/>(Platform)
+
+    Dev->>US: Commit agent changes
+    US->>QGR: After Commit event
+    QGR->>QGR: Filter matches Type = AiAuthoringBundle?
+    QGR->>US: Auto-create Test record (tool AgentTest)
+    US->>FN: JobExecution runs Job Template step (Run_Agentforce_Tests_1)
+    FN->>US: copado --downloadfiles (file "Copado Commit changes", no extension)
+    FN->>FN: Extract agents, strip _n version suffix, map to AgentName_Suite
+    FN->>SB: sf org login access-token (host extracted from SOAP endpoint)
+
+    loop per committed agent
+        FN->>SB: sf agent test run --api-name AgentName_Suite
+        SB-->>FN: Results JSON (output_validation per case)
+    end
+
+    alt every suite at or above threshold (80%)
+        FN-->>US: exit 0 — Result: Success
+        US-->>Dev: Story promotable
+    else any suite below threshold or missing
+        FN-->>US: exit 1 — Result: Failed (failed utterances in step log)
+        US-->>Dev: Promotion blocked until fixed and recommitted
+    end
+</pre>
+</div>
+<div id="qflow" class="wrap">
+<pre class="mermaid">
+flowchart TD
+    start([Gate fires after commit]) --> m{Commit manifest<br/>available?}
+    m -- "yes" --> dl["copado --downloadfiles<br/>file: 'Copado Commit changes'<br/>(no extension!)"]
+    dl --> ag{AiAuthoringBundle<br/>entries found?}
+    m -- "no" --> fb{Fallback suites<br/>configured?}
+    ag -- "no" --> fb
+    fb -- "no" --> notapp([PASS — gate not applicable])
+    fb -- "yes" --> loop
+    ag -- "yes" --> conv["Strip _n version suffix,<br/>map each agent to<br/>AgentName_Suite"]
+    conv --> loop["Next suite"]
+    loop --> run["sf agent test run<br/>in source sandbox"]
+    run --> started{Run started?}
+    started -- "no — suite missing" --> fail1["FAIL: agent has no suite<br/>(convention enforced)"]
+    started -- "yes" --> res["Fetch results JSON"]
+    res --> thr{"output_validation<br/>pass rate ≥ 80%?"}
+    thr -- "yes" --> ok["Suite passed"]
+    thr -- "no" --> fail2["FAIL + log<br/>failed utterances"]
+    ok --> more{More suites?}
+    fail1 --> more
+    fail2 --> more
+    more -- "yes" --> loop
+    more -- "no" --> verdict{Any FAIL?}
+    verdict -- "no" --> green(["exit 0 — Result Success<br/>story promotable"])
+    verdict -- "yes" --> red(["exit 1 — Result Failed<br/>promotion blocked"])
+
+    style green fill:#cdf4d3,stroke:#3e9b4b
+    style red fill:#ffcdc2,stroke:#dc3009
+    style notapp fill:#d9d9d9,stroke:#b3b3b3
+    style fail1 fill:#ffcdc2,stroke:#dc3009
+    style fail2 fill:#ffcdc2,stroke:#dc3009
+</pre>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: false, theme: "default" });
+  await mermaid.run();
+  for (const svg of document.querySelectorAll(".wrap svg")) {
+    const vb = svg.viewBox.baseVal;
+    const scale = Math.min(3, 5300 / vb.width);
+    svg.style.maxWidth = "none";
+    svg.style.width = (vb.width * scale) + "px";
+    svg.style.height = "auto";
+  }
+  const m = document.createElement("div");
+  m.textContent = "RENDER-COMPLETE";
+  document.body.appendChild(m);
+</script>
+</body></html>

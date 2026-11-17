@@ -1,0 +1,57 @@
+# This repository publishes ONLY the Copado × Agentforce quality-gate work.
+# Everything else in the working directory is ignored by default (allowlist pattern).
+/*
+
+# --- Quality gate components (allowlisted) ---
+!/.gitignore
+!/README.md
+!/sfdx-project.json
+
+# Copado org configuration sources (Function, Test Tool, GVS, gate records)
+!/copado/
+
+# Function scripts (the gate runner + the deploy/publish orchestrator)
+!/scripts/
+/scripts/*
+!/scripts/run_agentforce_tests.sh
+!/scripts/agentforce_deploy.sh
+
+# Test suite source of truth (YAML spec)
+!/specs/
+
+# Suite metadata that promotes alongside the agent
+!/force-app/
+/force-app/*
+!/force-app/main/
+/force-app/main/*
+!/force-app/main/default/
+/force-app/main/default/*
+!/force-app/main/default/aiEvaluationDefinitions/
+
+# Design doc + diagrams
+!/docs/
+/docs/*
+!/docs/agentforce-copado-cicd.md
+!/docs/assets/
+/docs/assets/*
+!/docs/assets/images/
+/docs/assets/images/*
+!/docs/assets/images/qgate-architecture.png
+!/docs/assets/images/qgate-sequence.png
+!/docs/assets/images/qgate-flow.png
+!/docs/assets/images/copado-cicd-architecture.png
+!/docs/assets/images/copado-cicd-sequence.png
+
+# Diagram render source (regenerates all PNGs)
+!/lab/
+/lab/*
+!/lab/artifacts/
+/lab/artifacts/*
+!/lab/artifacts/copado-diagrams.html
+
+# The Copado Functions knowledge skill distilled from building this
+!/.claude/
+/.claude/*
+!/.claude/skills/
+/.claude/skills/*
+!/.claude/skills/copado-functions/
