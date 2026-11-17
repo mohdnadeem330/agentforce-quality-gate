@@ -10,6 +10,9 @@
 # Copado org configuration sources (Function, Test Tool, GVS, gate records)
 !/copado/
 
+# Unlocked package source (DevOps Exchange extension)
+!/copado-extension/
+
 # Function scripts (the gate runner + the deploy/publish orchestrator)
 !/scripts/
 /scripts/*

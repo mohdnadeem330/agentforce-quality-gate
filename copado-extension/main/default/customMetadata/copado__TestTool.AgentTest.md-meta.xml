@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>AgentTest</label>
+    <protected>false</protected>
+    <values>
+        <field>copado__JobTemplate__c</field>
+        <value xsi:type="xsd:string">Run_Agentforce_Tests_1</value>
+    </values>
+    <values>
+        <field>copado__TestType__c</field>
+        <value xsi:type="xsd:string">Functional Test</value>
+    </values>
+    <values>
+        <field>copado__Applicable_Metadata_Types__c</field>
+        <value xsi:type="xsd:string">AiAuthoringBundle</value>
+    </values>
+    <values>
+        <field>copado__Automate_Test_Readiness__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>copado__Operation_Aware__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>copado__Run_On_Add__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>copado__Run_On_Delete__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>copado__Run_On_Full__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>copado__Run_On_RetrieveOnly__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>copado__Run_On_SelectiveCommit__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>copado__Requires_Manual_Interaction__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>copado__Environment_Scan_Enabled__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+</CustomMetadata>
